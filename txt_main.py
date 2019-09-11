@@ -42,33 +42,103 @@ def new_egg_example():
             time.sleep(0.5)
 
 
-my_url = "https://steamcommunity.com/app/1097840/reviews/?browsefilter=toprated&snr=1_5_100010_"
+# my_url = "https://steamcommunity.com/app/1097840/reviews/?browsefilter=toprated&snr=1_5_100010_"
 
-# Opening a connection, grabbing the page
-client = uReq(my_url)
+page_url_header = "https://steamcommunity.com/app/1097840/homecontent/?"
 
-# Save the download into an object
-page_html = client.read()
+page_url_params = {
+    "userreviewsoffset":10,
+    "p":2,
+    "workshopitemspage": 2,
+     "readytouseitemspage": 2,
+     "mtxitemspage": 2,
+     "itemspage": 2,
+     "screenshotspage": 2,
+     "videospage": 2,
+     "artpage": 2,
+     "allguidepage": 2,
+     "webguidepage": 2,
+     "integratedguidepage": 2,
+     "discussionspage": 2,
+}
 
-# Close the client
-client.close()
+page_url_params_frozen = {
+    "numperpage": 10,
+    "browsefilter": "toprated",
+    "l": "english",
+    "appHubSubSection": 10,
+    "filterLanguage": "default",
+    "searchText": "",
+    "forceanon": 1
+}
 
-# Clean up the HTML code
-page_soup = soup(page_html, "html.parser")
+# Make the first page URL
+page_urls = ["https://steamcommunity.com/app/1097840/reviews/?browsefilter=toprated&snr=1_5_100010_"]
 
-# Get the reviews
-review_elems = page_soup.findAll(name="div", attrs={"class":"apphub_CardTextContent"})
+for page_no in range(0, 3):
+    my_url = page_url_header
+    for k, v in page_url_params.items():
 
-for review_elem in review_elems:
-    date_posted = review_elem.findAll(name="div", attrs={"class":"date_posted"})[0].text
-    unclean_review = review_elem.text
-    review = ""
-    for ucr in unclean_review.split("\t"):
-        if (date_posted in ucr) or (len(ucr)==0):
+        if ("userreviewsoffset" == k) and (page_no > 0):
+            my_url += k
+            my_url += "="
+            my_url += str(v * page_no+1)
+            my_url += "&"
             continue
-        review += ucr
-        review += "\n"
-    # Sanity check - remove trailing white space
-    review = review.strip()
-    print(date_posted, "\n\t", review)
-    print(80*"-")
+
+        my_url += k
+        my_url += "="
+        my_url += str(v + page_no)
+        my_url += "&"
+
+    for k, v in page_url_params_frozen.items():
+        my_url += k
+        my_url += "="
+        my_url += str(v)
+        my_url += "&"
+
+    my_url = my_url[:-1]
+
+    page_urls.append(my_url)
+
+
+all_reviews = []
+
+for my_url in page_urls:
+    print(my_url)
+    # Opening a connection, grabbing the page
+    client = uReq(my_url)
+
+    # Save the download into an object
+    page_html = client.read()
+
+    # Close the client
+    client.close()
+
+    # Clean up the HTML code
+    page_soup = soup(page_html, "html.parser")
+
+    # Get the reviews
+    review_elems = page_soup.findAll(name="div", attrs={"class":"apphub_CardTextContent"})
+
+    for review_elem in review_elems:
+        date_posted = review_elem.findAll(name="div", attrs={"class":"date_posted"})[0].text
+        unclean_review = review_elem.text
+        review = ""
+        for ucr in unclean_review.split("\t"):
+            if (date_posted in ucr) or (len(ucr)==0):
+                continue
+            review += ucr
+            review += "\n"
+        # Sanity check - remove trailing white space
+        review = review.strip()
+        # print(date_posted, "\n\t", review)
+        # print(80*"-")
+
+        all_reviews.append((date_posted, review))
+
+    time.sleep(1)
+
+for dr in all_reviews:
+    print(dr)
+    print(80*"--")
